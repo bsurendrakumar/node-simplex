@@ -57,15 +57,14 @@ V8        20584 20588     abijeet   20u     IPv4            2467212       0t0   
 - Crash the server by going to http://127.0.0.1:3002/api/v1/country/list. This will crash one of the child processes. Whenever an uncaught exception occurs, we do some cleanup and exit. We then fork another process to take the place of the one that was just killed. Cleanup includes - 
    - Closing http server
    - Closing MySQL connections in generic pool
-   - Closing winston logger streams.
-   
+   - Closing winston logger streams.  
 - Wait for the MySQL connection in the master thread to be closed. When this happes, we are writing a log to the console -
 ```
 Destroying / ending master thread ID -  4984
 ```
 - Check your CPU usage, you'll notice that one of the CPU's has shot upto 100%.
 - Next run, `strace -o log.txt -eepoll_ctl,epoll_wait -p 20584`. Note that you might need to install **strace**. This command logs all the `epoll_ctl, epoll_wait` system calls made by the Node.JS process and puts it inside a file named **log.txt** the current working directory.
-- Open the **log.txt** file, and you'll notice the following logs -
+- Open the **log.txt** file, and you'll notice logs similar to these -
 ```
 epoll_wait(5, {{EPOLLIN|EPOLLHUP, {u32=16, u64=16}}}, 1024, 847) = 1
 epoll_ctl(5, EPOLL_CTL_DEL, 16, 7ffe441aa850) = -1 EBADF (Bad file descriptor)
