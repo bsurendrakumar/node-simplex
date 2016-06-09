@@ -5,4 +5,4 @@
 # node modules
 
 node_modules/
-log/*.log
+logs/*.log

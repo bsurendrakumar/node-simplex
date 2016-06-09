@@ -21,10 +21,18 @@ var cpuCount = require('os').cpus().length;
 var httpServer = null;
 
 // The master process - will only be used when on PROD
+var mCountry = new Country(null, null);
 if (config.express.isProduction && cluster.isMaster && !__CONFIG__.isClusterDisabled) {
   console.log('------------------------------------');
   console.log('Master Process ID:', process.pid);
   console.log('------------------------------------\n\n');
+
+  console.log('Creating an extra DB connection on the master thread.\n\n');
+  mCountry.getCountries(function(err) {
+    if(err) {
+      console.log(err);
+    }
+  });
 
   // Create a worker for each CPU
   for (var i = 0; i < cpuCount; i += 1) {
@@ -41,8 +49,7 @@ if (config.express.isProduction && cluster.isMaster && !__CONFIG__.isClusterDisa
 
   // Bind the api routes.
   app.get('/api/v1/country/list', function(req, res) {
-    var objCountry = new Country(null, null);
-    objCountry.getCountries(function(err, data) {
+    mCountry.getCountries(function(err, data) {
       if(data.length === 0) {
         // empty..
       }

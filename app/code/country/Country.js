@@ -1,5 +1,4 @@
 var Model = require(__CONFIG__.app_base_path + 'lib/model');
-var __ = require('underscore');
 var AppError = require(__CONFIG__.app_base_path + 'lib/app-error');
 var util = require('util');
 
@@ -21,10 +20,6 @@ Country.prototype.getCountries = function(cb) {
   this.getResults({
     query: sqlQuery,
     cb: function(err, data) {
-      if (!err && __.isEmpty(data)) {
-        err = new AppError(that.getStatusCode('notFound'),
-          'No active countries found', {});
-      }
       cb(err, undefined);
     }
   });

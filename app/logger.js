@@ -38,14 +38,6 @@ var logger = (function() {
     })]
   });
 
-  var deadlockInfo = new (winston.Logger)({
-    transports : [new winston.transports.File({
-      filename: __CONFIG__.app_base_path + '../logs/deadlocks.log',
-      json: false,
-      timestamp: true
-    })]
-  });
-
   var logAppErrors = function(error) {
     errLogger.error('\n----\n' + error.stack + '\n Arguments : ' + error.arguments + '\n Severity : ' + error.severity + '\n----\n');
   };
@@ -65,10 +57,6 @@ var logger = (function() {
     infoLogger.info(info + '\n------------------------------------\n');
   };
 
-  var logDeadlockInfo = function(info) {
-    deadlockInfo.info(info + '\n\n');
-  };
-
   var writeErrLog = function(err) {
     errLogger.error(err);
   };
@@ -83,7 +71,6 @@ var logger = (function() {
     maintLogger.close();
     errLogger.close();
     infoLogger.close();
-    deadlockInfo.close();
   };
 
   return {
@@ -92,7 +79,6 @@ var logger = (function() {
     writeLogErr: writeErrLog,
     logMaintError: logMaintError,
     logUncaughtError: logUncaughtError,
-    logDeadlockInfo : logDeadlockInfo,
     closeAll: closeAll
   };
 }());
