@@ -11,6 +11,8 @@ var uuid = require('node-uuid');
 var transactionPool = {};
 var getPool = require(__CONFIG__.app_base_path + 'lib/db-connector/pools/mariadb-pool');
 var logger = require(__CONFIG__.app_base_path + 'logger');
+var cluster = require('cluster');
+
 var defaultMsg = {
   errorDbConn: 'There was an error while communicating with the database.',
   queryExecution: 'There was an error while executing the query.'
@@ -70,99 +72,6 @@ MariaDB.prototype.getResults = function (objQuery, cb) {
     objQuery.useArray, objQuery.transactionID, objQuery.isMultiple);
 };
 
-/**
- * Returns the first value from the result set or null
- *
- * @param objQuery
- *          Object containing query, parameters etc.
- */
-MariaDB.prototype.getValue = function (objQuery, cb) {
-  objQuery = getDefaultValues(objQuery);
-  objQuery.useArray = true;
-  runQuery(this, true, objQuery.query, objQuery.data, function (err, data) {
-    if (err) {
-      cb(err, null);
-      return;
-    }
-    var response = null;
-    if (data.length !== 0 && data[0].length !== 0) {
-      response = data[0][0];
-    }
-    cb(null, response);
-  }, objQuery.closeConn, objQuery.useArray, objQuery.transactionID, objQuery.isMultiple);
-};
-
-MariaDB.prototype.beginTransaction = function (cb) {
-  var transactionID = uuid.v4();
-  var that = this;
-  if(isDraining) {
-    return cb(new AppError(new Error('Draining pool...'), 'The pool is being drained!', {}));
-  }
-  this.pool.acquire(function (err, client) {
-    if (err) {
-      return cb(err);
-    }
-    transactionPool[transactionID] = client;
-    client.query('START TRANSACTION;').on('result', function () { }).on('end', function () {
-      cb(null, transactionID);
-    }).on('error', function (err) {
-      destroyTransactionClient(that, transactionID);
-      cb(err);
-    });
-  });
-};
-
-MariaDB.prototype.commitTransaction = function (transactionID, cb) {
-  var client = transactionPool[transactionID];
-  var that = this;
-  if (!client) {
-    // TODO : Change this...
-    return cb(new AppError(500, 'Invalid transaction ID while committing', {
-      transactionID: 'Invalid transaction ID - ' + transactionID
-    }));
-  }
-  client.query('COMMIT;').on('result', function (res) {
-    res.on('error', function () {
-      this.rollbackTransaction(transactionID, function (err) {
-        return cb(err);
-      });
-    });
-  }).on('error', function (err) {
-    this.rollbackTransaction(transactionID, function (tErr) {
-      if (tErr) {
-        return cb({
-          transaction: tErr,
-          error: err
-        });
-      }
-      return cb(err);
-    });
-  }).on('end', function () {
-    destroyTransactionClient(that, transactionID);
-    cb(null);
-  });
-};
-
-MariaDB.prototype.rollbackTransaction = function (transactionID, cb) {
-  var client = transactionPool[transactionID];
-  var that = this;
-  if (client) {
-    client.query('ROLLBACK;').on('result', function (res) {
-      res.on('error', function (err) {
-        destroyTransactionClient(that, transactionID);
-        return cb(err);
-      });
-    }).on('error', function (err) {
-      destroyTransactionClient(that, transactionID);
-      return cb(err);
-    }).on('end', function () {
-      destroyTransactionClient(that, transactionID);
-      return cb(null);
-    });
-  }
-  destroyTransactionClient(that, transactionID);
-};
-
 MariaDB.prototype.queries = function (objQuery, cb) {
   objQuery = getDefaultValues(objQuery);
   runQuery(this, true, objQuery.query, objQuery.data, cb, objQuery.closeConn,
@@ -183,22 +92,11 @@ MariaDB.prototype.destroy = function(cbMain) {
     }
   }
   that.pool.drain(function() {
-
     that.pool.destroyAllNow(function() {
-      console.log(that.pool);
       return cbMain();
     });
   });
 };
-
-function destroyTransactionClient(objMaria, transactionID) {
-  if (!transactionPool[transactionID]) {
-    return;
-  }
-  var clientObj = transactionPool[transactionID];
-  objMaria.pool.release(clientObj);
-  delete transactionPool[transactionID];
-}
 
 function getDefaultValues(objQuery) {
   if (objQuery.closeConn === undefined) {
@@ -206,9 +104,6 @@ function getDefaultValues(objQuery) {
   }
   if (objQuery.useArray === undefined) {
     objQuery.useArray = false;
-  }
-  if (objQuery.transactionID === undefined) {
-    objQuery.transactionID = false;
   }
   if (objQuery.isMultiple === undefined) {
     objQuery.isMultiple = false;
@@ -222,23 +117,18 @@ function runQuery(objMaria, isSelect, query, data, cb, closeConn, useArray, tran
   var clientObj = null;
   var qCnt = 0;
   retryTransactionCnt = 0;
-
-  if (transactionID) {
-    clientObj = transactionPool[transactionID];
-    runQueryWithClient();
-  } else {
-    if(isDraining) {
-      return cb(new AppError(new Error('Draining pool...'), 'The pool is being drained!', {}));
-    }
-    objMaria.pool.acquire(function (err, client) {
-      if (err) {
-        return cb(new AppError(err, 'There was an error while acquiring the connection', {}));
-
-      }
-      clientObj = client;
-      runQueryWithClient();
-    });
+  if(isDraining) {
+    return cb(new AppError(new Error('Draining pool...'), 'The pool is being drained!', {}));
   }
+  objMaria.pool.acquire(function (err, client) {
+    if (err) {
+      return cb(new AppError(err, 'There was an error while acquiring the connection', {}));
+
+    }
+    clientObj = client;
+    runQueryWithClient();
+  });
+
 
   function runQueryWithClient() {
     try {
@@ -257,11 +147,7 @@ function runQuery(objMaria, isSelect, query, data, cb, closeConn, useArray, tran
         return cb(new AppError(err, objMaria.msgStrings.queryExecution));
       });
     } catch (e) {
-      if (transactionID) {
-        destroyTransactionClient(objMaria, transactionID);
-      } else {
-        objMaria.pool.release(clientObj);
-      }
+      objMaria.pool.release(clientObj);
       cb(new AppError(e, objMaria.msgStrings.queryExecution, {}));
     }
   }
@@ -309,7 +195,7 @@ function runQuery(objMaria, isSelect, query, data, cb, closeConn, useArray, tran
 
   // Called at the end of the query...
   function cbEndQuery() {
-    if (closeConn && !transactionID) {
+    if (closeConn) {
       objMaria.pool.release(clientObj);
     }
     if (!hadError) {
@@ -375,6 +261,9 @@ function modifyConfigObj(dbConfig) {
   };
 
   dbConfig.destroy = function(client) {
+    if(cluster.isMaster) {
+      console.log('Destroying / ending master thread ID - ', client.threadId);
+    }
     if(isDraining) {
       client.destroy();
     } else {

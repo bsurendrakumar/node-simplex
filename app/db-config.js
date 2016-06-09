@@ -9,7 +9,7 @@ var dbConfig = {
     name: 'mariadb',
     maxConn: 10,
     minConn: 5,
-    idleTimeout: 30000,
+    idleTimeout: 120000,
     host: mariadbHost,
     user: mariadbUser,
     password: mariadbPassword,

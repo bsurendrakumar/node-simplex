@@ -6,16 +6,15 @@ var http = require('http');
 var https = require('https');
 var fs = require('fs');
 var express = require('express');
+var process = require('process');
 
 // Osm Includes
 var config = require('./config');
 var logger = require('./logger');
-var helper = require('./lib/server-helper');
 var cleanUp = require('./lib/clean-up');
 
 var app = express();
-
-helper.init(app);
+var Country = require(__dirname + '/code/country/Country');
 
 // Count the machine's CPUs
 var cpuCount = require('os').cpus().length;
@@ -23,6 +22,9 @@ var httpServer = null;
 
 // The master process - will only be used when on PROD
 if (config.express.isProduction && cluster.isMaster && !__CONFIG__.isClusterDisabled) {
+  console.log('------------------------------------');
+  console.log('Master Process ID:', process.pid);
+  console.log('------------------------------------\n\n');
 
   // Create a worker for each CPU
   for (var i = 0; i < cpuCount; i += 1) {
@@ -34,12 +36,19 @@ if (config.express.isProduction && cluster.isMaster && !__CONFIG__.isClusterDisa
   });
 
 } else {
+  console.log('Child Process ID:', process.pid);
+  console.log('------------------------------------');
 
   // Bind the api routes.
-  helper.loadRoutes(app);
-
-  // 404 error
-  app.use('/api', helper.notFound);
+  app.get('/api/v1/country/list', function(req, res) {
+    var objCountry = new Country(null, null);
+    objCountry.getCountries(function(err, data) {
+      if(data.length === 0) {
+        // empty..
+      }
+      res.send('Pew Pew');
+    });
+  });
 
   httpServer = http.createServer(app).listen(config.express.port, config.express.ip, function (error) {
     if (error) {

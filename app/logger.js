@@ -62,7 +62,7 @@ var logger = (function() {
   };
 
   var logAppInfo = function(info) {
-    infoLogger.info(info + '\n----\n');
+    infoLogger.info(info + '\n------------------------------------\n');
   };
 
   var logDeadlockInfo = function(info) {
