@@ -27,7 +27,7 @@ Since the `node-mariasql` library does not support pooling, we are using the thi
 
 The `idleTimeout` for an object in the pool has been set to 120 seconds. This means that if there are more than 5 (since 5 is the minimum) objects in the pool and one of them has not been used for the last 120 seconds, it'll be destroyed.
 
-At server startup, we're making a simple call to our country model to fetch the list of countries. This code is [here](https://github.com/bsurendrakumar/node-simplex/blob/master/app/server.js#L31). This establishes a new connection to the database, so now in the pool there'll be a 6 SQL connection in the pool and one of them will get cleaned after 120 seconds.
+At server startup, we're making a simple call to our country model to fetch the list of countries. This code is [here](https://github.com/bsurendrakumar/node-simplex/blob/master/app/server.js#L31). This establishes a new connection to the database, so now in the pool there'll be a 6 SQL connection in the pool and one of which will get cleaned after 120 seconds.
 
 Following is the step by step process via which, we believe that the issue is with our usage of the mariasql library -
 
