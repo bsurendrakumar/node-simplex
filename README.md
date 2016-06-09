@@ -21,7 +21,7 @@ The reason its 120 seconds is because the generic-pool's `idleTimeout` is set to
 
 ## Why do we think its related to our usage of the mariasql library?
 
-[Link to module](https://github.com/mscdex/node-mariasql)
+[Link to node-mariasql module](https://github.com/mscdex/node-mariasql)
 
 Since the `node-mariasql` library does not support pooling, we are using the third party - [generic-pool]() to maintain a pool of connections. The minimum number of connections is set to 5. All its configuration can be found under `app/db-config.js`. So when the server starts, generic pool will kick of 5 connections to MySQL and keep them in its pool.
 
