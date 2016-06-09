@@ -1,6 +1,6 @@
-var mariadbHost = '10.0.0.99';
+var mariadbHost = '127.0.0.1';
 var mariadbUser = 'root';
-var mariadbPassword = '123456';
+var mariadbPassword = 'B3stPr@c';
 var mariadbDatabase = 'dev';
 
 // define the database configuration
