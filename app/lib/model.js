@@ -4,7 +4,6 @@ var AppError = require(__CONFIG__.app_base_path + 'lib/app-error');
 var logger = require(__CONFIG__.app_base_path + 'logger');
 var getStatus = require(__CONFIG__.app_base_path + 'lib/status');
 
-var uuid = require('node-uuid');
 var __ = require('underscore');
 var async = require('async');
 var util = require('util');

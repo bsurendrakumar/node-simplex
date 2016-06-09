@@ -15,17 +15,11 @@
     "url": "https://github.com/OsmosysSoftware/node-simplex/issues/"
   },
   "dependencies": {
-    "async": "1.4.0",
     "body-parser": "1.12.3",
-    "compression": "1.4.3",
     "express": "4.12.3",
-    "fs-extra": "0.18.2",
     "generic-pool": "2.4.2",
     "i18n": "0.5.0",
     "mariasql": "0.2.5",
-    "node-uuid": "1.4.2",
-    "request": "2.56.0",
-    "string": "2.2.0",
     "underscore": "1.8.3",
     "validator": "3.39.0",
     "winston": "1.0.0"
