@@ -7,21 +7,7 @@ MariaDB version - **v10.0.15**
 
 1. Clone the repo - `git clone https://github.com/bsurendrakumar/node-simplex.git`
 2. Run the SQL scripts under the sql folder - `db.sql`.
-3. Set the database configuration in - `/app/server.js`.
-```js
-var dbConfig = {
-  name: 'mariadb',
-  maxConn: 10,          // Max connections in pool
-  minConn: 5,           // Min connections in pool
-  idleTimeout: 120000,  // Time after which the conn will be cleared from pool.
-  host: '127.0.0.1',    // DB Host
-  user: 'root',         // DB User
-  password: '123',      // DB Password
-  db: 'dev',            // DB Name
-  connTimeout: 15,
-  multiStatements: true
-};
-```
+3. Set the database configuration [here](https://github.com/bsurendrakumar/node-simplex/blob/master/app/server.js#L9).
 4. Run `npm install` to install the dependent modules.
 5. Run `npm start` to start the server.
 
