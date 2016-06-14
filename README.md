@@ -1,15 +1,29 @@
 A sample created to demonstrate a 100% CPU usage issue using NodeJS (v4.2.2) clusters and mariasql.
 
-Node version - **v4.2.2**  
+Node version - **v4.2.2**
 MariaDB version - **v10.0.15**
 
 ## Directions for setup
 
 1. Clone the repo - `git clone https://github.com/bsurendrakumar/node-simplex.git`
 2. Run the SQL scripts under the sql folder - `db.sql`.
-3. Set the database configuration in - `/app/db-config.js`.
-4. Run `npm install`
-5. Run `npm start`
+3. Set the database configuration in - `/app/server.js`.
+```js
+var dbConfig = {
+  name: 'mariadb',
+  maxConn: 10,          // Max connections in pool
+  minConn: 5,           // Min connections in pool
+  idleTimeout: 120000,  // Time after which the conn will be cleared from pool.
+  host: '127.0.0.1',    // DB Host
+  user: 'root',         // DB User
+  password: '123',      // DB Password
+  db: 'dev',            // DB Name
+  connTimeout: 15,
+  multiStatements: true
+};
+```
+4. Run `npm install` to install the dependent modules.
+5. Run `npm start` to start the server.
 
 ## Reproducing the issue
 
@@ -23,11 +37,11 @@ The reason its 120 seconds is because the generic-pool's `idleTimeout` is set to
 
 [Link to node-mariasql module](https://github.com/mscdex/node-mariasql)
 
-Since the `node-mariasql` library does not support pooling, we are using the third party - [generic-pool]() to maintain a pool of connections. The minimum number of connections is set to 5. All its configuration can be found under `app/db-config.js`. So when the server starts, generic pool will kick of 5 connections to MySQL and keep them in its pool.
+Since the `node-mariasql` library does not support pooling, we are using the third party - [generic-pool](https://github.com/coopernurse/node-pool) to maintain a pool of connections. The minimum number of connections is set to 5. All its configuration can be found under [here](https://github.com/bsurendrakumar/node-simplex/blob/master/app/server.js#L9). So when the server starts, generic pool will kick of 5 connections to MySQL and keep them in its pool.
 
 The `idleTimeout` for an object in the pool has been set to 120 seconds. This means that if there are more than 5 (since 5 is the minimum) objects in the pool and one of them has not been used for the last 120 seconds, it'll be destroyed.
 
-At server startup, we're making a simple call to our country model to fetch the list of countries. This code is [here](https://github.com/bsurendrakumar/node-simplex/blob/master/app/server.js#L31). This establishes a new connection to the database, so now in the pool there'll be a 6 SQL connection in the pool and one of which will get cleaned after 120 seconds.
+At server startup, we're making a simple call to our country model to fetch the list of countries. This code is [here](https://github.com/bsurendrakumar/node-simplex/blob/master/app/server.js#L71). This establishes a new connection to the database, so now in the pool there'll be a 6 SQL connection in the pool and one of which will get cleaned after 120 seconds.
 
 Following is the step by step process via which, we believe that the issue is with our usage of the mariasql library -
 
@@ -54,10 +68,10 @@ V8        20584 20586     abijeet   20u     IPv4            2467212       0t0   
 V8        20584 20587     abijeet   20u     IPv4            2467212       0t0        TCP localhost:57092->localhost:mysql (ESTABLISHED)
 V8        20584 20588     abijeet   20u     IPv4            2467212       0t0        TCP localhost:57092->localhost:mysql (ESTABLISHED)
 ```
-- Crash the server by going to http://127.0.0.1:3002/api/v1/country/list. This will crash one of the child processes. Whenever an uncaught exception occurs, we do some cleanup and exit. We then fork another process to take the place of the one that was just killed. Cleanup includes - 
+- Crash the server by going to http://127.0.0.1:3002/api/v1/country/list. This will crash one of the child processes. Whenever an uncaught exception occurs, we do some cleanup and exit. We then fork another process to take the place of the one that was just killed. Cleanup includes -
    - Closing http server
    - Closing MySQL connections in generic pool
-   - Closing winston logger streams.  
+   - Closing winston logger streams.
 - Wait for the MySQL connection in the master thread to be closed. When this happes, we are writing a log to the console -
 ```
 Destroying / ending master thread ID -  4984
