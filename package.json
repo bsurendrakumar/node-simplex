@@ -18,6 +18,7 @@
     "express": "4.12.3",
     "generic-pool": "2.4.2",
     "mariasql": "0.2.5",
+    "mysql": "^2.11.1",
     "winston": "1.0.0"
   },
   "devDependencies": {

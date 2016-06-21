@@ -7,16 +7,16 @@ var ipAddr = '127.0.0.1';
 
 // define the database configuration
 var dbConfig = {
-  name: 'mariadb',
+  name: 'mysql',
   maxConn: 10,          // Max connections in pool
   minConn: 5,           // Min connections in pool
-  idleTimeout: 120000,  // Time after which the conn will be cleared from pool.
+  idleTimeout: 240000,  // Time after which the conn will be cleared from pool.
   host: '127.0.0.1',    // DB Host
   user: 'root',         // DB User
   password: 'B3stPr@c',      // DB Password
-  db: 'dev',            // DB Name
-  connTimeout: 15,
-  multiStatements: true
+  database: 'dev',            // DB Name
+  connectTimeout: 15000,
+  multipleStatements: true
 };
 
 var cluster = require('cluster');
@@ -24,20 +24,19 @@ var http = require('http');
 var express = require('express');
 var process = require('process');
 var poolModule = require('generic-pool');
-var mSQLClient = require('mariasql');
+var mSQLClient = require('mysql');
 
 var app = express();
 
 // Creating the pool of connections
 var pool = poolModule.Pool({
-  name: 'mariadb',
+  name: 'mysql',
   create: function(callback) {
-    var client = new mSQLClient();
-    client.connect(dbConfig);
-    client.on('error', function(err) {
-      callback(err, null);
-    });
-    client.on('ready', function() {
+    var client = mSQLClient.createConnection(dbConfig);
+    client.connect(function(err) {
+      if(err) {
+        callback(err, null);
+      }
       callback(null, client);
     });
   },
@@ -100,19 +99,21 @@ process.on('uncaughtException', function (err) {
   try {
     console.log('\n--------------');
     console.log(err);
-    // Stop the HTTP Server
     console.log('\n--------------');
     console.log('Encountered uncaught exception!');
-    console.log('Stopping HTTP server ...');
-    if(httpServer) {
-      httpServer.close();
-    }
-    console.log('Stopped HTTP server, performing cleanup ...');
+    console.log('Performing clean up ...');
     // Call the cleanup function
     cleanUp(function() {
-      // Exit!!
       console.log('Cleanup done!');
-      restartProcess();
+      // Stop the HTTP Server
+      if(httpServer) {
+        console.log('Stopping HTTP server ...');
+        httpServer.close(function() {
+          console.log('Stopped HTTP server, performing restart ...');
+          // Exit!!
+          restartProcess();
+        });
+      }
     });
   } catch (e) {
     console.log(e);
@@ -134,18 +135,19 @@ function getCountries(cbMain) {
       throw err;
     }
     try {
-      clientObj.query(sqlQuery, null, false).on('result', function (res) {
-        res.on('data', function(row) {
-          response.push(row);
-        });
-      }).on('end', function() {
+      clientObj.query(sqlQuery, null, function (err, results) {
+        if(err) {
+          pool.release(clientObj);
+          if(cbMain) {
+            return cbMain(err);
+          }
+          console.log(err);
+          return;
+        }
         pool.release(clientObj);
         if(cbMain) {
-          return cbMain(null, response);
+          return cbMain(null, results);
         }
-      }).on('error', function (err) {
-        pool.release(clientObj);
-        console.log(err);
       });
     } catch (e) {
       pool.release(clientObj);
