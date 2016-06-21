@@ -13,9 +13,9 @@ MariaDB version - **v10.0.15**
 
 ## Reproducing the issue
 
-Open the http://127.0.0.1:3002/api/v1/country/list in your browser as soon as you start your server, mostly within 120 seconds.
+Open the http://127.0.0.1:3002/api/v1/country/list in your browser as soon as you start your server, mostly within 240 seconds.
 
-The reason its 120 seconds is because the generic-pool's `idleTimeout` is set to 120 seconds.
+The reason its 240 seconds is because the generic-pool's `idleTimeout` is set to 240 seconds.
 
 > This URL will vary based on the where you're server is running.
 
@@ -25,9 +25,9 @@ The reason its 120 seconds is because the generic-pool's `idleTimeout` is set to
 
 Since the `node-mariasql` library does not support pooling, we are using the third party - [generic-pool](https://github.com/coopernurse/node-pool) to maintain a pool of connections. The minimum number of connections is set to 5. All its configuration can be found under [here](https://github.com/bsurendrakumar/node-simplex/blob/master/app/server.js#L9). So when the server starts, generic pool will kick of 5 connections to MySQL and keep them in its pool.
 
-The `idleTimeout` for an object in the pool has been set to 120 seconds. This means that if there are more than 5 (since 5 is the minimum) objects in the pool and one of them has not been used for the last 120 seconds, it'll be destroyed.
+The `idleTimeout` for an object in the pool has been set to 240 seconds. This means that if there are more than 5 (since 5 is the minimum) objects in the pool and one of them has not been used for the last 240 seconds, it'll be destroyed.
 
-At server startup, we're making a simple call to our country model to fetch the list of countries. This code is [here](https://github.com/bsurendrakumar/node-simplex/blob/master/app/server.js#L71). This establishes a new connection to the database, so now in the pool there'll be a 6 SQL connection in the pool and one of which will get cleaned after 120 seconds.
+At server startup, we're making a simple call to our country model to fetch the list of countries. This code is [here](https://github.com/bsurendrakumar/node-simplex/blob/master/app/server.js#L71). This establishes a new connection to the database, so now in the pool there'll be a 6 SQL connection in the pool and one of which will get cleaned after 240 seconds.
 
 Following is the step by step process via which, we believe that the issue is with our usage of the mariasql library -
 
@@ -80,3 +80,7 @@ This leads us to believe that somewhere, even when the connection to MySQL is re
    - https://github.com/joyent/libuv/issues/1099
    - https://github.com/nodejs/node-v0.x-archive/issues/6271
    - https://github.com/joyent/libuv/issues/826
+
+## 100% CPU usage is not happening with [mysql](https://github.com/mysqljs/mysql) library?  
+
+We updated the code in this branch to use [mysql](https://github.com/mysqljs/mysql) module and we are not seeing 100% CPU usage when we run this code.  
