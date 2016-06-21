@@ -10,7 +10,7 @@ var dbConfig = {
   name: 'mariadb',
   maxConn: 10,          // Max connections in pool
   minConn: 5,           // Min connections in pool
-  idleTimeout: 120000,  // Time after which the conn will be cleared from pool.
+  idleTimeout: 240000,  // Time after which the conn will be cleared from pool.
   host: '127.0.0.1',    // DB Host
   user: 'root',         // DB User
   password: 'B3stPr@c',      // DB Password
@@ -100,19 +100,21 @@ process.on('uncaughtException', function (err) {
   try {
     console.log('\n--------------');
     console.log(err);
-    // Stop the HTTP Server
     console.log('\n--------------');
     console.log('Encountered uncaught exception!');
-    console.log('Stopping HTTP server ...');
-    if(httpServer) {
-      httpServer.close();
-    }
-    console.log('Stopped HTTP server, performing cleanup ...');
+    console.log('Performing clean up ...');
     // Call the cleanup function
     cleanUp(function() {
-      // Exit!!
       console.log('Cleanup done!');
-      restartProcess();
+      // Stop the HTTP Server
+      if(httpServer) {
+        console.log('Stopping HTTP server ...');
+        httpServer.close(function() {
+          console.log('Stopped HTTP server, performing restart ...');
+          // Exit!!
+          restartProcess();
+        });
+      }
     });
   } catch (e) {
     console.log(e);
