@@ -17,7 +17,7 @@
   "dependencies": {
     "express": "4.12.3",
     "generic-pool": "2.4.2",
-    "mariasql": "0.2.5",
+    "mariasql": "0.2.6",
     "winston": "1.0.0"
   },
   "devDependencies": {
